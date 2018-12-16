@@ -26,6 +26,8 @@ package org.ta4j.core;
 import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -83,8 +85,8 @@ public class BaseTradingRecord implements TradingRecord {
      * Constructor.
      * @param orders the orders to be recorded (cannot be empty)
      */
-    public BaseTradingRecord(Order... orders) {
-        this(orders[0].getType());
+    public BaseTradingRecord(List<Order> orders) {
+        this(orders.get(0).getType());
         for (Order o : orders) {
             boolean newOrderWillBeAnEntry = currentTrade.isNew();
             if (newOrderWillBeAnEntry && o.getType() != startingType) {
@@ -96,8 +98,16 @@ public class BaseTradingRecord implements TradingRecord {
                 currentTrade = new Trade(o.getType());
             }
             Order newOrder = currentTrade.operate(o.getIndex(), o.getPrice(), o.getAmount());
-            recordOrder(newOrder, newOrderWillBeAnEntry);
+            recordOrder2(newOrder, newOrderWillBeAnEntry);
         }
+    }
+
+    /**
+     * Constructor.
+     * @param orders the orders to be recorded (cannot be empty)
+     */
+    public BaseTradingRecord(Order... orders) {
+        this(Arrays.asList(orders));
     }
     
     @Override
@@ -183,15 +193,19 @@ public class BaseTradingRecord implements TradingRecord {
             throw new IllegalArgumentException("Order should not be null");
         }
         
+        // Storing the new order in orders list
+        orders.add(order);
+
+        recordOrder2(order, isEntry);
+    }
+
+    private void recordOrder2(Order order, boolean isEntry) {
         // Storing the new order in entries/exits lists
         if (isEntry) {
             entryOrders.add(order);
         } else {
             exitOrders.add(order);
         }
-        
-        // Storing the new order in orders list
-        orders.add(order);
         if (Order.OrderType.BUY.equals(order.getType())) {
             // Storing the new order in buy orders list
             buyOrders.add(order);
@@ -199,7 +213,6 @@ public class BaseTradingRecord implements TradingRecord {
             // Storing the new order in sell orders list
             sellOrders.add(order);
         }
-
         // Storing the trade if closed
         if (currentTrade.isClosed()) {
             trades.add(currentTrade);
